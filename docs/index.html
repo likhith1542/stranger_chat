@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>STRANGER — Chat Without The Internet</title>
+<meta name="description" content="The offline P2P anonymous chat app. No internet. No accounts. No servers. Just you and a stranger nearby."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #050508;
+    --surface: #0d0d14;
+    --accent: #00ffb2;
+    --accent-dim: #00c48a;
+    --accent-glow: rgba(0,255,178,0.12);
+    --stranger: #ff5f87;
+    --stranger-glow: rgba(255,95,135,0.12);
+    --text: #eeeeff;
+    --muted: #666680;
+    --border: #1a1a2e;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none; z-index: 9998;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 48px;
+    background: rgba(5,5,8,0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900; font-size: 16px;
+    letter-spacing: 6px; color: var(--accent);
+    text-decoration: none;
+  }
+  .nav-links { display: flex; gap: 32px; list-style: none; }
+  .nav-links a { color: var(--muted); text-decoration: none; font-size: 11px; letter-spacing: 2px; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--accent); }
+  .nav-cta {
+    background: transparent; border: 1px solid var(--accent);
+    color: var(--accent); padding: 8px 20px;
+    font-family: 'Orbitron', monospace; font-size: 10px; letter-spacing: 2px;
+    cursor: pointer; transition: all 0.2s; text-decoration: none;
+  }
+  .nav-cta:hover { background: var(--accent-glow); box-shadow: 0 0 20px rgba(0,255,178,0.2); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 120px 24px 80px;
+    position: relative; overflow: hidden;
+  }
+  .radar-bg {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    width: 800px; height: 800px;
+    pointer-events: none;
+  }
+  .radar-ring {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    border-radius: 50%;
+    border: 1px solid rgba(0,255,178,0.06);
+    animation: pulse-ring 4s ease-out infinite;
+  }
+  .radar-ring:nth-child(1) { width: 200px; height: 200px; animation-delay: 0s; }
+  .radar-ring:nth-child(2) { width: 350px; height: 350px; animation-delay: 0.8s; }
+  .radar-ring:nth-child(3) { width: 500px; height: 500px; animation-delay: 1.6s; }
+  .radar-ring:nth-child(4) { width: 650px; height: 650px; animation-delay: 2.4s; }
+  .radar-ring:nth-child(5) { width: 800px; height: 800px; animation-delay: 3.2s; }
+  @keyframes pulse-ring {
+    0% { opacity: 0; transform: translate(-50%,-50%) scale(0.8); }
+    20% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%,-50%) scale(1); }
+  }
+  .radar-sweep {
+    position: absolute; top: 50%; left: 50%;
+    width: 400px; height: 1px;
+    transform-origin: 0 50%;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    animation: sweep 4s linear infinite; opacity: 0.4;
+  }
+  @keyframes sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .blip {
+    position: absolute; width: 6px; height: 6px;
+    background: var(--stranger); border-radius: 50%;
+    box-shadow: 0 0 8px var(--stranger);
+    animation: blip-fade 4s ease-in-out infinite;
+  }
+  .blip:nth-child(1) { top: 30%; left: 60%; animation-delay: 1s; }
+  .blip:nth-child(2) { top: 60%; left: 35%; animation-delay: 2.2s; }
+  .blip:nth-child(3) { top: 45%; left: 70%; animation-delay: 0.5s; }
+  .blip:nth-child(4) { top: 25%; left: 45%; animation-delay: 3s; }
+  @keyframes blip-fade {
+    0%,100% { opacity: 0; transform: scale(0.5); }
+    50% { opacity: 1; transform: scale(1); }
+  }
+  .hero-tag { font-size: 10px; letter-spacing: 4px; color: var(--muted); margin-bottom: 24px; animation: fade-up 0.8s ease both; }
+  .hero-title {
+    font-family: 'Orbitron', monospace; font-weight: 900;
+    font-size: clamp(56px, 12vw, 120px); line-height: 0.9; letter-spacing: -2px;
+    animation: fade-up 0.8s 0.1s ease both;
+  }
+  .hero-title .line1 { color: var(--accent); display: block; }
+  .hero-title .line2 { color: var(--stranger); display: block; }
+  .hero-subtitle {
+    font-size: clamp(13px, 2vw, 17px); color: var(--muted);
+    max-width: 520px; line-height: 1.8; margin: 32px auto;
+    animation: fade-up 0.8s 0.2s ease both;
+  }
+  .hero-subtitle em { color: var(--text); font-style: normal; }
+  .hero-ctas {
+    display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+    animation: fade-up 0.8s 0.3s ease both;
+  }
+  .btn-primary {
+    background: var(--accent); color: #000; border: none;
+    padding: 14px 32px; font-family: 'Orbitron', monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 3px;
+    cursor: pointer; text-decoration: none; transition: all 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .btn-primary:hover { box-shadow: 0 0 32px rgba(0,255,178,0.5); transform: translateY(-2px); }
+  .btn-ghost {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text); padding: 14px 32px;
+    font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 3px;
+    cursor: pointer; text-decoration: none; transition: all 0.2s;
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .hero-stats {
+    display: flex; gap: 48px; margin-top: 64px;
+    animation: fade-up 0.8s 0.4s ease both;
+  }
+  .stat { text-align: center; }
+  .stat-num { font-family: 'Orbitron', monospace; font-size: 28px; font-weight: 700; color: var(--accent); }
+  .stat-label { font-size: 10px; color: var(--muted); letter-spacing: 2px; margin-top: 4px; }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* SECTIONS */
+  .section-wrap { padding: 100px 24px; }
+  .section-inner { max-width: 1100px; margin: 0 auto; }
+  .section-label { font-size: 10px; letter-spacing: 4px; color: var(--muted); margin-bottom: 12px; }
+  .section-title { font-family: 'Orbitron', monospace; font-size: clamp(28px,4vw,48px); font-weight: 700; line-height: 1.1; margin-bottom: 16px; }
+  .section-sub { color: var(--muted); font-size: 13px; line-height: 1.8; max-width: 480px; }
+
+  /* HOW IT WORKS */
+  .how-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 2px; margin-top: 64px; border: 1px solid var(--border);
+  }
+  .how-card {
+    background: var(--surface); padding: 40px 32px;
+    border-right: 1px solid var(--border);
+    position: relative; overflow: hidden; transition: background 0.3s;
+  }
+  .how-card:last-child { border-right: none; }
+  .how-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform 0.4s;
+  }
+  .how-card:hover::before { transform: scaleX(1); }
+  .how-card:hover { background: rgba(0,255,178,0.03); }
+  .how-num { font-family: 'Orbitron', monospace; font-size: 48px; font-weight: 900; color: var(--border); line-height: 1; margin-bottom: 24px; transition: color 0.3s; }
+  .how-card:hover .how-num { color: var(--accent-dim); }
+  .how-card h3 { font-family: 'Orbitron', monospace; font-size: 12px; letter-spacing: 2px; margin-bottom: 12px; }
+  .how-card p { font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+  /* FEATURES */
+  .features-bg { background: var(--surface); }
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 24px; margin-top: 64px; }
+  .feature-card { border: 1px solid var(--border); padding: 32px; position: relative; transition: border-color 0.3s, transform 0.3s; }
+  .feature-card:hover { border-color: var(--accent); transform: translateY(-4px); }
+  .feature-icon { font-size: 28px; margin-bottom: 16px; display: block; }
+  .feature-card h3 { font-family: 'Orbitron', monospace; font-size: 12px; letter-spacing: 2px; margin-bottom: 10px; }
+  .feature-card p { font-size: 12px; color: var(--muted); line-height: 1.7; }
+  .feature-badge {
+    position: absolute; top: 16px; right: 16px;
+    font-size: 9px; letter-spacing: 1px; padding: 3px 8px;
+    background: var(--accent-glow); color: var(--accent);
+    border: 1px solid rgba(0,255,178,0.2);
+  }
+
+  /* ENCRYPTION */
+  .enc-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+  .enc-visual {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 40px; font-size: 11px; line-height: 1.9; position: relative; overflow: hidden;
+  }
+  .enc-visual::before { content: 'ENCRYPTION FLOW'; position: absolute; top: 12px; right: 16px; font-size: 9px; letter-spacing: 2px; color: var(--muted); }
+  .enc-comment { color: var(--muted); }
+  .enc-keyword { color: var(--stranger); }
+  .enc-value { color: var(--accent); }
+  .enc-cursor { display: inline-block; width: 8px; height: 14px; background: var(--accent); vertical-align: middle; animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* USE CASES */
+  .usecases-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 16px; margin-top: 64px; }
+  .usecase-card { border: 1px solid var(--border); padding: 32px 24px; text-align: center; transition: all 0.3s; }
+  .usecase-card:hover { border-color: var(--stranger); background: var(--stranger-glow); transform: scale(1.03); }
+  .usecase-emoji { font-size: 36px; display: block; margin-bottom: 16px; }
+  .usecase-card h3 { font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 2px; margin-bottom: 8px; }
+  .usecase-card p { font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+  /* DOWNLOAD */
+  .download-wrap { padding: 120px 24px; text-align: center; position: relative; overflow: hidden; }
+  .download-glow { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 600px; height: 600px; background: radial-gradient(circle, rgba(0,255,178,0.05) 0%, transparent 70%); pointer-events: none; }
+  .download-inner { position: relative; max-width: 600px; margin: 0 auto; }
+  .download-platforms { display: flex; gap: 12px; justify-content: center; margin-top: 40px; flex-wrap: wrap; }
+  .platform-badge { display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); padding: 12px 20px; text-decoration: none; color: var(--text); transition: all 0.2s; font-size: 12px; }
+  .platform-badge:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* FOOTER */
+  footer { border-top: 1px solid var(--border); padding: 40px 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  footer .logo { font-family: 'Orbitron', monospace; font-weight: 900; font-size: 13px; letter-spacing: 4px; color: var(--accent); }
+  footer p { font-size: 11px; color: var(--muted); }
+  footer a { color: var(--muted); text-decoration: none; margin-left: 24px; font-size: 11px; }
+  footer a:hover { color: var(--accent); }
+
+  /* REVEAL */
+  .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  @media (max-width: 768px) {
+    nav { padding: 16px 20px; }
+    .nav-links { display: none; }
+    .hero-stats { gap: 24px; }
+    .enc-inner { grid-template-columns: 1fr; gap: 40px; }
+    footer { flex-direction: column; text-align: center; }
+    footer a { margin: 0 12px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="#">STRANGER</a>
+  <ul class="nav-links">
+    <li><a href="#how">HOW IT WORKS</a></li>
+    <li><a href="#features">FEATURES</a></li>
+    <li><a href="#security">SECURITY</a></li>
+    <li><a href="#download">DOWNLOAD</a></li>
+  </ul>
+  <a class="nav-cta" href="https://github.com/likhith1542/stranger_chat/releases/latest" target="_blank">GET THE APP</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="radar-bg">
+    <div class="radar-ring"></div><div class="radar-ring"></div>
+    <div class="radar-ring"></div><div class="radar-ring"></div><div class="radar-ring"></div>
+    <div class="radar-sweep"></div>
+    <div class="blip"></div><div class="blip"></div><div class="blip"></div><div class="blip"></div>
+  </div>
+  <p class="hero-tag">// OFFLINE · ANONYMOUS · ENCRYPTED</p>
+  <h1 class="hero-title">
+    <span class="line1">STR</span>
+    <span class="line2">ANGER</span>
+  </h1>
+  <p class="hero-subtitle">
+    Chat with <em>strangers nearby</em> — no internet, no accounts, no servers.
+    Bluetooth + WiFi Direct with <em>end-to-end encryption</em>.
+    Works on flights, campuses, events. Anywhere.
+  </p>
+  <div class="hero-ctas">
+    <a class="btn-primary" href="https://github.com/likhith1542/stranger_chat/releases/latest" target="_blank">↓ DOWNLOAD APK</a>
+    <a class="btn-ghost" href="https://github.com/likhith1542/stranger_chat" target="_blank">VIEW SOURCE</a>
+  </div>
+  <div class="hero-stats">
+    <div class="stat"><div class="stat-num">0</div><div class="stat-label">SERVERS</div></div>
+    <div class="stat"><div class="stat-num">0</div><div class="stat-label">ACCOUNTS</div></div>
+    <div class="stat"><div class="stat-num">∞</div><div class="stat-label">PRIVACY</div></div>
+    <div class="stat"><div class="stat-num">100m</div><div class="stat-label">RANGE</div></div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="section-wrap" id="how">
+  <div class="section-inner">
+    <div class="reveal">
+      <p class="section-label">// HOW IT WORKS</p>
+      <h2 class="section-title">No cloud.<br/>No compromise.</h2>
+      <p class="section-sub">Every message goes directly device-to-device. Your data never touches a server.</p>
+    </div>
+    <div class="how-grid reveal">
+      <div class="how-card">
+        <div class="how-num">01</div>
+        <h3>BLE DISCOVERY</h3>
+        <p>Your phone broadcasts a BLE beacon and scans simultaneously. Nearby STRANGER users appear on your radar within seconds — no WiFi required.</p>
+      </div>
+      <div class="how-card">
+        <div class="how-num">02</div>
+        <h3>DIRECT CONNECT</h3>
+        <p>Tap a stranger. They get an accept/reject prompt. Once accepted, a WiFi Direct tunnel forms — up to 250 Mbps, zero intermediaries.</p>
+      </div>
+      <div class="how-card">
+        <div class="how-num">03</div>
+        <h3>KEY EXCHANGE</h3>
+        <p>Both devices instantly generate X25519 keypairs, exchange public keys, and derive a shared AES-256-GCM secret via ECDH.</p>
+      </div>
+      <div class="how-card">
+        <div class="how-num">04</div>
+        <h3>ENCRYPTED CHAT</h3>
+        <p>Every message is AES-256-GCM encrypted before it leaves your device. When the chat ends, keys vanish and messages auto-wipe.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<div class="section-wrap features-bg" id="features">
+  <div class="section-inner">
+    <div class="reveal">
+      <p class="section-label">// FEATURES</p>
+      <h2 class="section-title">Built different.</h2>
+      <p class="section-sub">Everything you need. Nothing you don't.</p>
+    </div>
+    <div class="features-grid reveal">
+      <div class="feature-card">
+        <span class="feature-icon">📡</span>
+        <div class="feature-badge">CORE</div>
+        <h3>OFFLINE P2P</h3>
+        <p>Google Nearby Connections — BLE for discovery, WiFi Direct for transfer. Works on flights, remote areas, underground.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🔐</span>
+        <div class="feature-badge">SECURITY</div>
+        <h3>E2E ENCRYPTION</h3>
+        <p>X25519 + AES-256-GCM per session. Keys are ephemeral — generated fresh every chat, never stored anywhere.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🕵️</span>
+        <div class="feature-badge">PRIVACY</div>
+        <h3>ANONYMOUS MODE</h3>
+        <p>No signup. No phone number. Random identity like <code style="color:var(--accent)">Neon_Wolf_4821</code> on install. Regenerate anytime.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🗑️</span>
+        <h3>AUTO-DELETE</h3>
+        <p>Chat history auto-wiped from both devices the moment the connection drops. Nothing persists.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🏷️</span>
+        <h3>INTEREST TAGS</h3>
+        <p>Set local tags like #gaming or #music. Find strangers with matching interests — tags never leave your device.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🚫</span>
+        <h3>BLOCK & IGNORE</h3>
+        <p>Block any user permanently. Block list stored locally only — never synced, never shared anywhere.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ENCRYPTION -->
+<div class="section-wrap" id="security">
+  <div class="section-inner enc-inner">
+    <div class="reveal">
+      <p class="section-label">// SECURITY</p>
+      <h2 class="section-title">Military-grade.<br/>Zero knowledge.</h2>
+      <p class="section-sub" style="margin-bottom:24px">We don't even have a server that could be hacked. Messages are encrypted before leaving your phone — and keys disappear when the chat ends.</p>
+      <p class="section-sub">Perfect forward secrecy means captured traffic today can't be decrypted tomorrow.</p>
+    </div>
+    <div class="enc-visual reveal">
+      <div><span class="enc-comment">// Fresh keypair every session</span></div>
+      <div><span class="enc-keyword">const</span> myKey = <span class="enc-value">X25519.generate()</span></div>
+      <div><span class="enc-comment">// Exchange over Nearby (public — safe)</span></div>
+      <div><span class="enc-keyword">send</span>( myKey.<span class="enc-value">publicKey</span> )</div>
+      <div><span class="enc-keyword">receive</span>( peer.<span class="enc-value">publicKey</span> )</div>
+      <div>&nbsp;</div>
+      <div><span class="enc-comment">// Shared secret — never transmitted</span></div>
+      <div><span class="enc-keyword">const</span> secret = <span class="enc-value">ECDH</span>( myKey.private, peer.public )</div>
+      <div><span class="enc-keyword">const</span> aesKey = <span class="enc-value">HKDF_SHA256</span>( secret )</div>
+      <div>&nbsp;</div>
+      <div><span class="enc-comment">// Encrypted with random nonce each time</span></div>
+      <div><span class="enc-keyword">const</span> msg = <span class="enc-value">AES_256_GCM</span>.encrypt(</div>
+      <div>&nbsp;&nbsp;plaintext, aesKey, <span class="enc-value">nonce.random()</span></div>
+      <div>)</div>
+      <div>&nbsp;</div>
+      <div><span class="enc-comment">// Disconnect → keys gone forever</span></div>
+      <div>aesKey.<span class="enc-value">destroy()</span> <span class="enc-cursor"></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- USE CASES -->
+<div class="section-wrap features-bg">
+  <div class="section-inner">
+    <div class="reveal">
+      <p class="section-label">// USE CASES</p>
+      <h2 class="section-title">Works everywhere<br/>internet doesn't.</h2>
+    </div>
+    <div class="usecases-grid reveal">
+      <div class="usecase-card"><span class="usecase-emoji">✈️</span><h3>FLIGHTS</h3><p>Chat with 32B. No WiFi needed.</p></div>
+      <div class="usecase-card"><span class="usecase-emoji">🎓</span><h3>CAMPUS</h3><p>Meet strangers in your lecture hall.</p></div>
+      <div class="usecase-card"><span class="usecase-emoji">🎉</span><h3>EVENTS</h3><p>Concerts, festivals — when networks are jammed.</p></div>
+      <div class="usecase-card"><span class="usecase-emoji">🌄</span><h3>REMOTE</h3><p>Hiking trails, rural areas, off-grid.</p></div>
+      <div class="usecase-card"><span class="usecase-emoji">🚇</span><h3>SUBWAY</h3><p>Underground with zero signal. Still works.</p></div>
+      <div class="usecase-card"><span class="usecase-emoji">🔒</span><h3>PRIVACY</h3><p>Chat that leaves no trace anywhere.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- DOWNLOAD -->
+<div class="download-wrap" id="download">
+  <div class="download-glow"></div>
+  <div class="download-inner reveal">
+    <p class="section-label">// GET STARTED</p>
+    <h2 class="section-title" style="font-family:'Orbitron',monospace;font-size:clamp(36px,6vw,64px);font-weight:700">
+      Download.<br/><span style="color:var(--accent)">Disappear.</span>
+    </h2>
+    <p style="color:var(--muted);font-size:13px;margin-top:16px;line-height:1.7">
+      Free. Open source. No tracking.<br/>Enable "Install unknown apps" in Android settings, then install.
+    </p>
+    <div class="download-platforms">
+      <a class="platform-badge" href="https://github.com/likhith1542/stranger_chat/releases/latest" target="_blank">
+        <span>📦</span> Download APK (arm64)
+      </a>
+      <a class="platform-badge" href="https://github.com/likhith1542/stranger_chat" target="_blank">
+        <span>⭐</span> Star on GitHub
+      </a>
+    </div>
+    <p style="color:var(--muted);font-size:11px;margin-top:32px;letter-spacing:2px">REQUIRES ANDROID 5.0+ · BLUETOOTH + NEARBY DEVICES</p>
+  </div>
+</div>
+
+<footer>
+  <span class="logo">STRANGER</span>
+  <p>Built in public · #30AppsIn30Days · by @likhith1542</p>
+  <div>
+    <a href="https://github.com/likhith1542/stranger_chat" target="_blank">GitHub</a>
+    <a href="https://github.com/likhith1542/stranger_chat/releases" target="_blank">Releases</a>
+    <a href="https://github.com/likhith1542/stranger_chat/blob/main/LICENSE" target="_blank">MIT License</a>
+  </div>
+</footer>
+
+<script>
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // Cursor glow
+  const glow = document.createElement('div');
+  glow.style.cssText = 'position:fixed;width:300px;height:300px;pointer-events:none;z-index:9997;background:radial-gradient(circle,rgba(0,255,178,0.04) 0%,transparent 70%);transform:translate(-50%,-50%);transition:left 0.05s,top 0.05s;';
+  document.body.appendChild(glow);
+  document.addEventListener('mousemove', e => { glow.style.left = e.clientX + 'px'; glow.style.top = e.clientY + 'px'; });
+</script>
+</body>
+</html>
