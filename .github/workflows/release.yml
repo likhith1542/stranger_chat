@@ -40,41 +40,43 @@ jobs:
         run: flutter pub get
 
       # ── Decode keystore ──────────────────────────────────────────────────
-      # The keystore is stored as a base64 GitHub Secret.
-      # See README — Setup Secrets section for how to encode it.
+      # tr -d '\n' strips newlines that macOS base64 inserts every 76 chars.
+      # base64 -d is the GNU/Linux flag on the Ubuntu runner.
       - name: Decode keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/stranger_release.jks
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\n' | base64 -d > android/stranger_release.jks
+          if [ ! -s android/stranger_release.jks ]; then
+            echo "ERROR: Keystore is empty — check KEYSTORE_BASE64 secret"
+            exit 1
+          fi
+          echo "Keystore decoded: $(wc -c < android/stranger_release.jks) bytes"
 
       # ── Build signed APKs ────────────────────────────────────────────────
       - name: Build release APKs (split by ABI)
         env:
-          KEYSTORE_PATH:    android/stranger_release.jks
+          KEYSTORE_PATH:     android/stranger_release.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS:         ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD:      ${{ secrets.KEY_PASSWORD }}
-        run: |
-          flutter build apk --release --split-per-abi
+        run: flutter build apk --release --split-per-abi
 
-      # Also build a universal APK for convenience
       - name: Build universal APK
         env:
-          KEYSTORE_PATH:    android/stranger_release.jks
+          KEYSTORE_PATH:     android/stranger_release.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS:         ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD:      ${{ secrets.KEY_PASSWORD }}
-        run: |
-          flutter build apk --release
+        run: flutter build apk --release
 
-      # ── Collect artifacts ────────────────────────────────────────────────
+      # ── Rename APKs ───────────────────────────────────────────────────────
       - name: Rename APKs with version tag
         run: |
           TAG="${{ github.ref_name }}"
           cd build/app/outputs/flutter-apk/
-          mv app-arm64-v8a-release.apk  STRANGER-${TAG}-arm64.apk   2>/dev/null || true
-          mv app-armeabi-v7a-release.apk STRANGER-${TAG}-arm32.apk  2>/dev/null || true
-          mv app-x86_64-release.apk     STRANGER-${TAG}-x86_64.apk  2>/dev/null || true
-          mv app-release.apk            STRANGER-${TAG}-universal.apk 2>/dev/null || true
+          mv app-arm64-v8a-release.apk   STRANGER-${TAG}-arm64.apk     2>/dev/null || true
+          mv app-armeabi-v7a-release.apk STRANGER-${TAG}-arm32.apk     2>/dev/null || true
+          mv app-x86_64-release.apk      STRANGER-${TAG}-x86_64.apk    2>/dev/null || true
+          mv app-release.apk             STRANGER-${TAG}-universal.apk 2>/dev/null || true
 
       # ── Create GitHub Release ─────────────────────────────────────────────
       - name: Create GitHub Release
@@ -89,22 +91,21 @@ jobs:
             ### 📦 Download
             | APK | Device |
             |-----|--------|
-            | `STRANGER-${{ github.ref_name }}-arm64.apk` | Most modern Android phones (recommended) |
+            | `STRANGER-${{ github.ref_name }}-arm64.apk` | Most modern Android phones ✅ recommended |
             | `STRANGER-${{ github.ref_name }}-arm32.apk` | Older 32-bit Android devices |
-            | `STRANGER-${{ github.ref_name }}-x86_64.apk` | Intel/AMD Android devices, some emulators |
-            | `STRANGER-${{ github.ref_name }}-universal.apk` | Works on all devices (larger file) |
+            | `STRANGER-${{ github.ref_name }}-x86_64.apk` | Intel/AMD Android, some emulators |
+            | `STRANGER-${{ github.ref_name }}-universal.apk` | All devices (larger file) |
 
             ### ⚠️ Installation
-            Enable **Install unknown apps** in Settings before installing.
+            Enable **Install unknown apps** in Android Settings before installing.
 
             ### 🔐 Permissions required
-            - Bluetooth (peer discovery)
-            - Location (Android BLE scanning prerequisite)
-            - Nearby Devices (WiFi Direct)
+            - Bluetooth — peer discovery
+            - Location — Android BLE scanning prerequisite
+            - Nearby Devices — WiFi Direct data transfer
 
           draft: false
           prerelease: false
-          files: |
-            build/app/outputs/flutter-apk/STRANGER-*.apk
+          files: build/app/outputs/flutter-apk/STRANGER-*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
