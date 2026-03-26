@@ -13,13 +13,9 @@ if (localPropertiesFile.exists()) {
 val flutterRoot = localProperties.getProperty("flutter.sdk")
     ?: throw GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
 
-
-// Avoid hardcoding minSdk - pull from local.properties or default to 21
-
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // Apply the Flutter Gradle Plugin
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -33,7 +29,7 @@ if (keystorePropertiesFile.exists()) {
 android {
     namespace = "com.example.stranger_chat"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973"
+    ndkVersion = "27.0.12077973"   // ← fixed: highest version required by plugins
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -57,10 +53,11 @@ android {
     }
 
     signingConfigs {
-        // Define the release config dynamically
         create("release") {
             keyAlias = keystoreProperties["keyAlias"] as String? ?: System.getenv("KEY_ALIAS")
             keyPassword = keystoreProperties["keyPassword"] as String? ?: System.getenv("KEY_PASSWORD")
+            // Gradle resolves relative paths from android/app/
+            // So "stranger_release.jks" = android/app/stranger_release.jks
             storeFile = if (keystoreProperties["storeFile"] != null) {
                 file(keystoreProperties["storeFile"] as String)
             } else {
@@ -88,7 +85,5 @@ flutter {
 }
 
 dependencies {
-    // The Kotlin plugin automatically adds the stdlib. 
-    // Only add this if you specifically need jdk7 and it's missing.
     implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
 }
