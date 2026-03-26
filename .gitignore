@@ -56,7 +56,6 @@ build/
 doc/api/
 
 # Generated files
-*.g.dart
 *.freezed.dart
 *.mocks.dart
 
