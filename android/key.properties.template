@@ -1,0 +1,8 @@
+# android/key.properties
+# !! DO NOT COMMIT THIS FILE — it is listed in .gitignore !!
+# Fill in your values after running the keytool command below.
+
+storePassword=YOUR_KEYSTORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=stranger_key
+storeFile=../stranger_release.jks
